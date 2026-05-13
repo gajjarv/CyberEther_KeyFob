@@ -1,0 +1,165 @@
+---
+version: 2
+title: ATA KeyFob
+summary: This is demo of ATA imaging showing Keyfob localization
+author: Vishal Gajjar + Opus 4.7
+graph:
+  - name: soapy
+    module: soapy
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      hintString: ''
+      deviceString: 'Generic RTL2832U OEM :: 00000001'
+      streamString: ''
+      frequency: 3.138e+08
+      frequencyStep: 1000000
+      sampleRate: 1000000
+      automaticGain: true
+      numberOfBatches: 8
+      numberOfTimeSamples: 8192
+      bufferMultiplier: 4
+    meta:
+      node:
+        x: -11
+        y: 206.5
+        width: 140
+        height: 0
+  - name: multiply_constant
+    module: multiply_constant
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      constant: 0.1
+    input:
+      factor: '${graph.soapy.output.signal}'
+    meta:
+      node:
+        x: 208
+        y: 206.5
+        width: 140
+        height: 0
+  - name: spectrum_engine
+    module: spectrum_engine
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      axis: 1
+      enableAgc: false
+      enableScale: true
+      rangeMin: -147.85715
+      rangeMax: 0
+    input:
+      buffer: '${graph.multiply_constant.output.product}'
+    meta:
+      node:
+        x: 244
+        y: 591.5
+        width: 140
+        height: 0
+  - name: synthetic_array_generator
+    module: synthetic_array_generator
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      arrayPreset: ata42
+      azimuthDeg: 180
+      elevationDeg: 45
+      frequencyHz: 1420405751
+      noisePower: 1
+      noiseSnrDb: -1
+      noiseSeed: 12648430
+    input:
+      signal: '${graph.multiply_constant.output.product}'
+    meta:
+      node:
+        x: 448
+        y: 128.5
+        width: 140
+        height: 0
+  - name: waterfall
+    module: waterfall
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      height: 512
+      interpolate: false
+    input:
+      signal: '${graph.spectrum_engine.output.buffer}'
+    meta:
+      node:
+        x: 448
+        y: 499.5
+        width: 605
+        height: 506.5
+      surface_default:
+        attachedWidth: 605
+        attachedHeight: 381
+        detachedWidth: 783
+        detachedHeight: 589
+        detached: false
+  - name: correlator
+    module: correlator
+    device: cpu
+    runtime: native
+    provider: generic
+    input:
+      positions: '${graph.synthetic_array_generator.output.positions}'
+      signal: '${graph.synthetic_array_generator.output.signal}'
+    meta:
+      node:
+        x: 698
+        y: 150.5
+        width: 140
+        height: 0
+  - name: dirty_imager
+    module: dirty_imager
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      imageSize: 128
+      fieldOfViewDeg: 0.5
+      phaseCenterAzDeg: 180
+      phaseCenterElDeg: 45
+      observingFrequencyHz: 1.4204058e+09
+      mode: amplitude
+      excludeAutos: true
+      useTensorMetadata: true
+    input:
+      positions: '${graph.correlator.output.positions}'
+      visibilities: '${graph.correlator.output.visibilities}'
+    meta:
+      node:
+        x: 913
+        y: 104.5
+        width: 140
+        height: 0
+  - name: image_display
+    module: image_display
+    device: cpu
+    runtime: native
+    provider: generic
+    config:
+      autoNormalize: true
+      manualMin: 0
+      manualMax: 1
+    input:
+      image: '${graph.dirty_imager.output.image}'
+    meta:
+      node:
+        x: 1155
+        y: 148.5
+        width: 453
+        height: 578.5
+      surface_default:
+        attachedWidth: 453
+        attachedHeight: 419
+        detachedWidth: 719
+        detachedHeight: 591
+        detached: false
